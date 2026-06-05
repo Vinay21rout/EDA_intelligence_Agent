@@ -1,0 +1,12 @@
+langchain
+langchain_community
+langchain_core
+langgraph
+langchain_groq
+langchain_google_genai
+langchain_ollama
+dotenv
+pydantic
+pandas 
+matplotlib
+seaborn
