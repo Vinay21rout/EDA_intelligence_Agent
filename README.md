@@ -153,6 +153,32 @@ GRAPH/
 
 ---
 
+## ⚔️ EDA Agent vs. ydata-profiling
+
+> Why build a multi-agent EDA system when tools like `ydata-profiling` already exist?
+
+| Feature | 🤖 EDA Agent | 📦 ydata-profiling |
+|---|---|---|
+| **Workflow Style** | Modular agent-based pipeline via LangGraph | One-shot automated report generator |
+| **Customization** | Each agent fully tailorable per dataset | Predefined logic, limited customization |
+| **Interactivity** | Agents can branch, skip, adapt dynamically | Static HTML report with fixed sections |
+| **Integration** | Plugs into LangChain, CrewAI, RAG systems | Standalone tool, mainly for quick exploration |
+| **Scalability** | Custom strategies — sampling, scalable libs | May slow down or crash on large datasets |
+| **Output** | Plots, logs, recommendations incrementally | Single comprehensive HTML/PDF report |
+| **🧠 LLM Insights** | ✅ Real LLM-generated insights & recommendations | ❌ No LLM — purely statistical summaries |
+
+### 🏆 Where EDA Agent wins
+- **LLM-powered understanding** — not just numbers, but *what they mean* and *what to do next*
+- **Agent modularity** — swap, extend, or skip any stage without touching the rest
+- **AI/ML pipeline ready** — designed to integrate into larger workflows, not just standalone exploration
+
+### ⚠️ Known Limitations
+- Requires a Groq API key for LLM agents (InsightAgent, RecommendationAgent)
+- LLM output quality depends on how much statistical context is passed in the prompt
+- No interactive plot drill-down (static images only for now)
+
+---
+
 ## 🛠️ Tech Stack
 
 | Tool | Purpose |
