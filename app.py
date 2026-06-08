@@ -251,7 +251,15 @@ with st.sidebar:
         if submitted and nl_input.strip():
             st.session_state["chat_history"].append({"role": "user", "content": nl_input})
             with st.spinner("Thinking..."):
-                sql_result = sql_app.invoke({**st.session_state["eda_state"], "nl_query": nl_input})
+                invoke_state = {
+                    **st.session_state["eda_state"],
+                    "nl_query":   nl_input,
+                    "sql_query":  None,
+                    "sql_result": None,
+                    "sql_answer": None,
+                    "token_usage": st.session_state["eda_state"].get("token_usage", {}),
+                }
+                sql_result = sql_app.invoke(invoke_state)
 
             sql_query   = sql_result.get("sql_query", "")
             result_data = sql_result.get("sql_result", [])

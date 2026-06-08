@@ -18,6 +18,8 @@ class SQLAnswerAgent:
         if isinstance(result_data, str):
             return {"sql_answer": result_data}
 
+        if not result_data:
+            return {"sql_answer": "The query returned no results. Try rephrasing your question."}
         result_preview = json.dumps(result_data[:10], indent=2)
 
         prompt = f"""You are a helpful data analyst assistant.
