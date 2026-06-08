@@ -20,4 +20,11 @@ class InsightAgent:
 Give 5 concise bullet point insights about patterns, distributions, and notable observations."""
 
         response = self.llm.invoke([HumanMessage(content=prompt)])
-        return {"insights": response.content}
+        token_usage = state.get("token_usage", {})
+        usage = response.response_metadata.get("token_usage", {})
+        token_usage["insight"] = {
+            "prompt_tokens": usage.get("prompt_tokens", 0),
+            "completion_tokens": usage.get("completion_tokens", 0),
+            "total_tokens": usage.get("total_tokens", 0),
+        }
+        return {"insights": response.content, "token_usage": token_usage}
