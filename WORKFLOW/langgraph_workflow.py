@@ -10,6 +10,7 @@ from AGENTS.recommendation_agent import RecommendationAgent
 from AGENTS.report_agent import ReportAgent
 from AGENTS.nl_to_sql_agent import NLtoSQLAgent
 from AGENTS.sql_agent import SQLAgent
+from AGENTS.sql_answer_agent import SQLAnswerAgent
 
 
 class EDA_State(TypedDict):
@@ -25,6 +26,7 @@ class EDA_State(TypedDict):
     nl_query: Optional[str]
     sql_query: Optional[str]
     sql_result: Optional[object]
+    sql_answer: Optional[str]
     token_usage: dict
 
 
@@ -36,8 +38,9 @@ visualization       = VisualizationAgent()
 insight             = InsightAgent()
 recommendation      = RecommendationAgent()
 report              = ReportAgent()
-nl_to_sql           = NLtoSQLAgent()
-sql                 = SQLAgent()
+nl_to_sql   = NLtoSQLAgent()
+sql         = SQLAgent()
+sql_answer  = SQLAnswerAgent()
 
 # Build graph
 graph = StateGraph(EDA_State)
@@ -70,9 +73,11 @@ app = graph.compile()
 
 # Separate entry for SQL-only queries (after EDA state is available)
 sql_graph = StateGraph(EDA_State)
-sql_graph.add_node("nl_to_sql", lambda s: nl_to_sql.run(s))
-sql_graph.add_node("sql",       lambda s: sql.run(s))
-sql_graph.add_edge(START,       "nl_to_sql")
-sql_graph.add_edge("nl_to_sql", "sql")
-sql_graph.add_edge("sql",       END)
+sql_graph.add_node("nl_to_sql",  lambda s: nl_to_sql.run(s))
+sql_graph.add_node("sql",        lambda s: sql.run(s))
+sql_graph.add_node("sql_answer", lambda s: sql_answer.run(s))
+sql_graph.add_edge(START,        "nl_to_sql")
+sql_graph.add_edge("nl_to_sql",  "sql")
+sql_graph.add_edge("sql",        "sql_answer")
+sql_graph.add_edge("sql_answer", END)
 sql_app = sql_graph.compile()

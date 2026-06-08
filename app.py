@@ -52,6 +52,17 @@ if uploaded_file:
     c3.metric("❗ Missing", int(preview_df.isnull().sum().sum()))
     st.divider()
 
+    # Auto-run DataUnderstanding + Cleaning on upload so chat is always available
+    if st.session_state["eda_state"] is None or \
+       st.session_state["eda_state"].get("file_path") != temp_path:
+        with st.spinner("Preparing dataset for chat..."):
+            base_state = {"file_path": temp_path, "output_dir": output_dir, "token_usage": {}}
+            base_state.update(DataUnderstandingAgent().run(base_state))
+            base_state.update(CleaningAgent().run(base_state))
+            st.session_state["eda_state"] = base_state
+            st.session_state["chat_history"] = []
+            st.session_state["last_result"]  = None
+
     if st.button("▶️ Run EDA Pipeline", use_container_width=True, type="primary"):
 
         AGENTS_META = [
@@ -213,7 +224,7 @@ with st.sidebar:
     chat_container = st.container(height=420)
     with chat_container:
         if not st.session_state["chat_history"]:
-            st.markdown("<p style='color:#475569;font-size:0.82em;text-align:center;margin-top:40px'>Run the EDA pipeline first,<br/>then ask anything about your data.</p>", unsafe_allow_html=True)
+            st.markdown("<p style='color:#475569;font-size:0.82em;text-align:center;margin-top:40px'>Upload a CSV to start asking<br/>questions about your data.</p>", unsafe_allow_html=True)
         for msg in st.session_state["chat_history"]:
             if msg["role"] == "user":
                 st.markdown(f"""
@@ -230,7 +241,7 @@ with st.sidebar:
 
     st.divider()
 
-    # Input form
+    # Input form — always available after upload
     if st.session_state["eda_state"]:
         with st.form("chat_form", clear_on_submit=True):
             nl_input  = st.text_input("", placeholder="e.g. top 5 rows where age > 40",
@@ -244,26 +255,27 @@ with st.sidebar:
 
             sql_query   = sql_result.get("sql_query", "")
             result_data = sql_result.get("sql_result", [])
+            sql_answer  = sql_result.get("sql_answer", "")
             usage       = sql_result.get("token_usage", {}).get("nl_to_sql", {})
-            total_tok   = usage.get("total_tokens", 0)
+            total_tok   = sum(v.get("total_tokens", 0) for v in sql_result.get("token_usage", {}).values())
 
             if isinstance(result_data, list) and result_data:
                 st.session_state["chat_history"].append({
                     "role": "bot",
-                    "content": f"Found **{len(result_data)} row(s)**",
+                    "content": sql_answer or f"Found {len(result_data)} row(s).",
                     "sql": sql_query, "tokens": total_tok
                 })
                 st.session_state["last_result"] = result_data
             else:
                 st.session_state["chat_history"].append({
                     "role": "bot",
-                    "content": str(result_data) if result_data else "No results found.",
+                    "content": sql_answer or (str(result_data) if result_data else "No results found."),
                     "sql": sql_query, "tokens": total_tok
                 })
                 st.session_state["last_result"] = None
             st.rerun()
     else:
-        st.info("⚠️ Run EDA pipeline first.")
+        st.info("⚠️ Upload a CSV file to start chatting.")
 
 # Show last query result in main area if wide mode
 if st.session_state.get("last_result") and st.session_state["chat_wide"]:

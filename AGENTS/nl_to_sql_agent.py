@@ -24,6 +24,13 @@ Return ONLY the SQL query, no explanation, no markdown.
 Question: {nl_query}"""
 
         response = self.llm.invoke([HumanMessage(content=prompt)])
+
+        # Strip markdown fences if LLM wraps in ```sql ... ```
+        raw = response.content.strip()
+        if raw.startswith("```"):
+            raw = raw.split("\n", 1)[-1]
+            raw = raw.rsplit("```", 1)[0].strip()
+
         token_usage = state.get("token_usage", {})
         usage = response.response_metadata.get("token_usage", {})
         token_usage["nl_to_sql"] = {
@@ -32,6 +39,6 @@ Question: {nl_query}"""
             "total_tokens": usage.get("total_tokens", 0),
         }
         return {
-            "sql_query": response.content.strip(),
+            "sql_query": raw,
             "token_usage": token_usage,
         }

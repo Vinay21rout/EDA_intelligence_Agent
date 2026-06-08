@@ -20,12 +20,15 @@
 
 ## ✨ Features
 
-- 🤖 **Multi-Agent Pipeline** — 7 specialized agents, each with a single responsibility
+- 🤖 **Multi-Agent Pipeline** — 10 specialized agents, each with a single responsibility
 - 🧠 **LLM-Powered Insights** — Uses Groq's `llama-3.3-70b-versatile` for deep analysis
 - 📊 **Auto Visualizations** — Histograms, correlation heatmap, countplots saved automatically
 - 🗂️ **Dataset Isolation** — Each dataset gets its own folder under `GRAPH/<dataset_name>/`
 - 🖥️ **Streamlit UI** — Clean interactive interface with tabbed results and report download
 - 📄 **Markdown Report** — Full EDA report compiled and downloadable
+- 💬 **Sidebar Chatbot** — Ask questions in plain English, get SQL + plain English answers instantly
+- 🔢 **Token Usage Tracking** — Live LLM token usage per agent with bar chart breakdown
+- 🗃️ **NL → SQL → Answer** — Natural language → DuckDB SQL → LLM plain English explanation
 
 ---
 
@@ -45,6 +48,12 @@
 │  │  Report  │◀──│Recommend-  │◀──│      Insight Agent       │  │
 │  │  Agent   │   │ation Agent │   │   (Groq LLaMA 3.3 70B)   │  │
 │  └──────────┘   └────────────┘   └──────────────────────────┘  │
+│                                                                   │
+│                     SQL Sub-Graph (on-demand)                     │
+│  ┌────────────┐   ┌───────────┐   ┌──────────────────────────┐  │
+│  │ NLtoSQL    │──▶│ SQLAgent  │──▶│     SQLAnswerAgent       │  │
+│  │   Agent    │   │ (DuckDB)  │   │   (Plain English reply)  │  │
+│  └────────────┘   └───────────┘   └──────────────────────────┘  │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -61,6 +70,9 @@
 | `InsightAgent` | LLM-generated insights via Groq |
 | `RecommendationAgent` | LLM-generated actionable recommendations |
 | `ReportAgent` | Compiles full markdown EDA report |
+| `NLtoSQLAgent` | Converts natural language questions to DuckDB SQL |
+| `SQLAgent` | Executes SQL against cleaned dataframe via DuckDB |
+| `SQLAnswerAgent` | Explains query results in plain English via LLM |
 
 ---
 
@@ -75,7 +87,10 @@ EDA_AGENT/
 │   ├── visualization_agent.py
 │   ├── insight_agent.py
 │   ├── recommendation_agent.py
-│   └── report_agent.py
+│   ├── report_agent.py
+│   ├── nl_to_sql_agent.py
+│   ├── sql_agent.py
+│   └── sql_answer_agent.py
 ├── WORKFLOW/
 │   └── langgraph_workflow.py
 ├── FILE_input/
@@ -187,6 +202,7 @@ GRAPH/
 | [Groq](https://groq.com/) | LLM inference (LLaMA 3.3 70B) |
 | [Streamlit](https://streamlit.io/) | Web UI |
 | [Pandas](https://pandas.pydata.org/) | Data manipulation |
+| [DuckDB](https://duckdb.org/) | In-memory SQL engine for NL queries |
 | [Matplotlib](https://matplotlib.org/) + [Seaborn](https://seaborn.pydata.org/) | Visualizations |
 
 ---
