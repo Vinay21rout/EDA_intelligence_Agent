@@ -2,7 +2,7 @@ import os
 import time
 import pandas as pd
 import streamlit as st
-from WORKFLOW.langgraph_workflow import app, sql_app
+from WORKFLOW.langgraph_workflow import app
 from AGENTS.data_understanding_agent import DataUnderstandingAgent
 from AGENTS.cleaning_agent import CleaningAgent
 from AGENTS.statistics_agent import StatisticsAgent
@@ -13,18 +13,9 @@ from AGENTS.report_agent import ReportAgent
 
 st.set_page_config(page_title="EDA Agent", page_icon="🔍", layout="wide")
 
-# ── Sidebar width CSS (wide mode) ─────────────────────────────────────────────
-if st.session_state.get("chat_wide"):
-    st.markdown("""
-    <style>
-    section[data-testid="stSidebar"] { min-width: 520px !important; max-width: 520px !important; }
-    </style>""", unsafe_allow_html=True)
 
 # ── Session state init ─────────────────────────────────────────────────────────
-if "chat_history"  not in st.session_state: st.session_state["chat_history"]  = []
-if "chat_wide"     not in st.session_state: st.session_state["chat_wide"]     = False
-if "eda_state"     not in st.session_state: st.session_state["eda_state"]     = None
-if "last_result"   not in st.session_state: st.session_state["last_result"]   = None
+if "eda_state" not in st.session_state: st.session_state["eda_state"] = None
 
 # ── Header ─────────────────────────────────────────────────────────────────────
 st.markdown("""
@@ -52,10 +43,10 @@ if uploaded_file:
     c3.metric("❗ Missing", int(preview_df.isnull().sum().sum()))
     st.divider()
 
-    # Auto-run DataUnderstanding + Cleaning on upload so chat is always available
+    # Auto-run DataUnderstanding + Cleaning on upload
     if st.session_state["eda_state"] is None or \
        st.session_state["eda_state"].get("file_path") != temp_path:
-        with st.spinner("Preparing dataset for chat..."):
+        with st.spinner("Preparing dataset..."):
             base_state = {"file_path": temp_path, "output_dir": output_dir, "token_usage": {}}
             base_state.update(DataUnderstandingAgent().run(base_state))
             base_state.update(CleaningAgent().run(base_state))
@@ -197,96 +188,3 @@ if uploaded_file:
                 with open(report_path, "r") as f:
                     st.download_button("⬇️ Download Report", f.read(),
                                        file_name="eda_report.md", mime="text/markdown")
-
-# ── Sidebar Chatbot ───────────────────────────────────────────────────────────
-with st.sidebar:
-    st.markdown("""
-    <div style='text-align:center;padding:10px 0 4px'>
-        <span style='font-size:1.5em'>🗃️</span>
-        <span style='font-weight:700;font-size:1.05em'> Ask Your Data</span><br/>
-        <span style='font-size:0.75em;color:#94a3b8'>Natural Language → SQL · Groq</span>
-    </div>
-    """, unsafe_allow_html=True)
-    st.divider()
-
-    # Toggle wide mode by controlling sidebar width via session state label trick
-    col1, col2 = st.columns([1, 1])
-    with col1:
-        if st.button("🔲 Wide" if not st.session_state["chat_wide"] else "🔳 Normal", use_container_width=True):
-            st.session_state["chat_wide"] = not st.session_state["chat_wide"]
-            st.rerun()
-    with col2:
-        if st.button("🗑️ Clear", use_container_width=True):
-            st.session_state["chat_history"] = []
-            st.rerun()
-
-    # Chat history
-    chat_container = st.container(height=420)
-    with chat_container:
-        if not st.session_state["chat_history"]:
-            st.markdown("<p style='color:#475569;font-size:0.82em;text-align:center;margin-top:40px'>Upload a CSV to start asking<br/>questions about your data.</p>", unsafe_allow_html=True)
-        for msg in st.session_state["chat_history"]:
-            if msg["role"] == "user":
-                st.markdown(f"""
-                <div style='background:#7c3aed22;border:1px solid #7c3aed55;border-radius:12px 12px 2px 12px;
-                            padding:8px 12px;font-size:0.85em;margin:4px 0;color:#e2e8f0;text-align:right'>
-                🧑 {msg['content']}</div>""", unsafe_allow_html=True)
-            else:
-                sql_block = f"<div style='background:#0f172a;border:1px solid #1e40af;border-radius:6px;padding:5px 8px;font-family:monospace;font-size:0.75em;color:#93c5fd;margin-top:4px;word-break:break-all'>⚡ {msg['sql']}</div>" if msg.get("sql") else ""
-                tok_block = f"<div style='font-size:0.72em;color:#475569;margin-top:3px'>🔢 {msg['tokens']} tokens</div>" if msg.get("tokens") else ""
-                st.markdown(f"""
-                <div style='background:#1e293b;border:1px solid #334155;border-radius:12px 12px 12px 2px;
-                            padding:8px 12px;font-size:0.85em;margin:4px 0;color:#cbd5e1'>
-                🤖 {msg['content']}{sql_block}{tok_block}</div>""", unsafe_allow_html=True)
-
-    st.divider()
-
-    # Input form — always available after upload
-    if st.session_state["eda_state"]:
-        with st.form("chat_form", clear_on_submit=True):
-            nl_input  = st.text_input("", placeholder="e.g. top 5 rows where age > 40",
-                                      label_visibility="collapsed")
-            submitted = st.form_submit_button("Send ➤", use_container_width=True, type="primary")
-
-        if submitted and nl_input.strip():
-            st.session_state["chat_history"].append({"role": "user", "content": nl_input})
-            with st.spinner("Thinking..."):
-                invoke_state = {
-                    **st.session_state["eda_state"],
-                    "nl_query":   nl_input,
-                    "sql_query":  None,
-                    "sql_result": None,
-                    "sql_answer": None,
-                    "token_usage": st.session_state["eda_state"].get("token_usage", {}),
-                }
-                sql_result = sql_app.invoke(invoke_state)
-
-            sql_query   = sql_result.get("sql_query", "")
-            result_data = sql_result.get("sql_result", [])
-            sql_answer  = sql_result.get("sql_answer", "")
-            usage       = sql_result.get("token_usage", {}).get("nl_to_sql", {})
-            total_tok   = sum(v.get("total_tokens", 0) for v in sql_result.get("token_usage", {}).values())
-
-            if isinstance(result_data, list) and result_data:
-                st.session_state["chat_history"].append({
-                    "role": "bot",
-                    "content": sql_answer or f"Found {len(result_data)} row(s).",
-                    "sql": sql_query, "tokens": total_tok
-                })
-                st.session_state["last_result"] = result_data
-            else:
-                st.session_state["chat_history"].append({
-                    "role": "bot",
-                    "content": sql_answer or (str(result_data) if result_data else "No results found."),
-                    "sql": sql_query, "tokens": total_tok
-                })
-                st.session_state["last_result"] = None
-            st.rerun()
-    else:
-        st.info("⚠️ Upload a CSV file to start chatting.")
-
-# Show last query result in main area if wide mode
-if st.session_state.get("last_result") and st.session_state["chat_wide"]:
-    st.divider()
-    st.markdown("### 🗃️ Query Result")
-    st.dataframe(pd.DataFrame(st.session_state["last_result"]), use_container_width=True)
